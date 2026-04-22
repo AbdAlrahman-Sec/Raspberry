@@ -1,11 +1,11 @@
 from picamera2 import Picamera2
 import numpy as np
-import tensorflow.lite as tflite
+from ai_edge_litert.interpreter import Interpreter
 from PIL import Image
 import time
 
 # Load model
-interpreter = tflite.Interpreter(model_path="/home/pi/plastic_sorter/model.tflite")
+interpreter = Interpreter(model_path="/home/pi/plastic_sorter/model.tflite")
 interpreter.allocate_tensors()
 input_details = interpreter.get_input_details()
 output_details = interpreter.get_output_details()
