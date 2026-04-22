@@ -1,6 +1,6 @@
 from picamera2 import Picamera2
 import numpy as np
-import tflite_runtime.interpreter as tflite
+import tensorflow.lite as tflite
 from PIL import Image
 import time
 
