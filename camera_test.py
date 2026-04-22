@@ -29,8 +29,12 @@ while True:
         # Capture image
         frame = camera.capture_array()
 
-        # Resize and convert to UINT8 (required for quantized model)
+        # Save it so we can see what the camera captured
         img = Image.fromarray(frame).resize((224, 224))
+        img.save("/home/abdalrahman/Desktop/Raspberry/last_capture.jpg")
+        print("📸 Image saved as last_capture.jpg — check what it looks like!")
+
+        # Convert to UINT8
         input_data = np.expand_dims(np.array(img, dtype=np.uint8), axis=0)
 
         # Run the model
