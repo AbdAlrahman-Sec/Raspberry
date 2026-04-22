@@ -1,20 +1,20 @@
 from picamera2 import Picamera2
-import numpy as np
 from ai_edge_litert.interpreter import Interpreter
+import numpy as np
 from PIL import Image
 import time
 
 # Load model
-interpreter = Interpreter(model_path="/home/pi/plastic_sorter/model.tflite")
+interpreter = Interpreter(model_path="/home/abdalrahman/Desktop/Raspberry/model.tflite")
 interpreter.allocate_tensors()
 input_details = interpreter.get_input_details()
 output_details = interpreter.get_output_details()
 
 # Load labels
-with open("/home/pi/plastic_sorter/labels.txt", "r") as f:
+with open("/home/abdalrahman/Desktop/Raspberry/labels.txt", "r") as f:
     labels = [line.strip().split(" ", 1)[-1] for line in f.readlines()]
 
-# Setup camera (same as your working code)
+# Setup camera
 camera = Picamera2()
 camera.configure(camera.create_still_configuration())
 camera.start()
@@ -26,10 +26,10 @@ while True:
     user_input = input("> ").strip()
 
     if user_input == "1":
-        # Capture image (same as your working code)
+        # Capture image
         frame = camera.capture_array()
 
-        # Resize to 224x224 (what the model expects)
+        # Resize and convert to UINT8 (required for quantized model)
         img = Image.fromarray(frame).resize((224, 224))
         input_data = np.expand_dims(np.array(img, dtype=np.uint8), axis=0)
 
@@ -40,7 +40,7 @@ while True:
 
         # Get result
         predicted_index = np.argmax(output_data)
-        confidence = output_data[predicted_index] * 100
+        confidence = output_data[predicted_index] / 255.0 * 100
         label = labels[predicted_index]
 
         print(f"🔍 Result: {label.upper()} ({confidence:.1f}% confidence)")
