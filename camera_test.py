@@ -31,7 +31,7 @@ while True:
 
         # Resize to 224x224 (what the model expects)
         img = Image.fromarray(frame).resize((224, 224))
-        input_data = np.expand_dims(np.array(img, dtype=np.float32) / 255.0, axis=0)
+        input_data = np.expand_dims(np.array(img, dtype=np.uint8), axis=0)
 
         # Run the model
         interpreter.set_tensor(input_details[0]['index'], input_data)
