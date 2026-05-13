@@ -4,7 +4,7 @@ import base64
 import subprocess
 
 ser = serial.Serial('/dev/ttyUSB0', 9600, timeout=1)
-client = anthropic.Anthropic(api_key="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")
+client = anthropic.Anthropic(api_key="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")
 
 def take_photo():
     subprocess.run([
