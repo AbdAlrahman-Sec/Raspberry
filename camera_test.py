@@ -1,58 +1,63 @@
-from picamera2 import Picamera2
-from ai_edge_litert.interpreter import Interpreter
-import numpy as np
-from PIL import Image
-import time
+import serial
+import anthropic
+import base64
+import subprocess
 
-# Load model
-interpreter = Interpreter(model_path="/home/abdalrahman/Desktop/Raspberry/model.tflite")
-interpreter.allocate_tensors()
-input_details = interpreter.get_input_details()
-output_details = interpreter.get_output_details()
+ser = serial.Serial('/dev/ttyUSB0', 9600, timeout=1)
+client = anthropic.Anthropic(api_key="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")
 
-# Load labels
-with open("/home/abdalrahman/Desktop/Raspberry/labels.txt", "r") as f:
-    labels = [line.strip().split(" ", 1)[-1] for line in f.readlines()]
+def take_photo():
+    subprocess.run([
+        "rpicam-still", "-o", "item.jpg",
+        "--nopreview", "-t", "1000"
+    ])
 
-# Setup camera
-camera = Picamera2()
-camera.configure(camera.create_still_configuration())
-camera.start()
-time.sleep(2)
+def classify_plastic():
+    with open("item.jpg", "rb") as f:
+        img_data = base64.standard_b64encode(f.read()).decode("utf-8")
 
-print("Plastic Sorter Ready! Press 1 + Enter to scan, or q to quit.")
+    response = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=50,
+        messages=[{
+            "role": "user",
+            "content": [
+                {
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": "image/jpeg",
+                        "data": img_data
+                    }
+                },
+                {
+                    "type": "text",
+                    "text": """Look at this plastic item. Identify the plastic type.
+                    Reply with ONLY one word: PET, HDPE, PP, or OTHER.
+                    No explanation, just the one word."""
+                }
+            ]
+        }]
+    )
+    return response.content[0].text.strip()
 
+def sort():
+    print("📸 Taking photo...")
+    take_photo()
+    print("🤖 Classifying plastic...")
+    plastic_type = classify_plastic()
+    print(f"✅ Detected: {plastic_type}")
+    ser.write(f"{plastic_type}\n".encode())
+    print(f"📤 Sent to Arduino: {plastic_type}")
+
+# Main loop
 while True:
-    user_input = input("> ").strip()
-
+    user_input = input("\nPress 1 to scan, q to quit: ")
     if user_input == "1":
-        frame = camera.capture_array()
-        img = Image.fromarray(frame).resize((224, 224))
-        img.save("/home/abdalrahman/Desktop/Raspberry/last_capture.jpg")
-        print("📸 Image saved!")
-
-        input_data = np.expand_dims(np.array(img, dtype=np.uint8), axis=0)
-
-        interpreter.set_tensor(input_details[0]['index'], input_data)
-        interpreter.invoke()
-        output_data = interpreter.get_tensor(output_details[0]['index'])[0]
-
-        # Print ALL scores so we can see what's happening
-        print("--- All class scores ---")
-        for i, label in enumerate(labels):
-            confidence = output_data[i] / 255.0 * 100
-            print(f"  {label}: {confidence:.1f}%")
-        print("------------------------")
-
-        predicted_index = np.argmax(output_data)
-        confidence = output_data[predicted_index] / 255.0 * 100
-        label = labels[predicted_index]
-        print(f"🔍 Result: {label.upper()} ({confidence:.1f}% confidence)\n")
-
-    elif user_input.lower() == "q":
-        print("Exiting...")
-        camera.stop()
+        sort()
+    elif user_input == "q":
+        print("Goodbye!")
+        ser.close()
         break
-
     else:
         print("Invalid input. Press 1 to scan or q to quit.")
